@@ -2,17 +2,20 @@ const express = require("express");
 const cors = require("cors");
 const { nanoid } = require("nanoid");
 const { Client } = require("pg");
+require("dotenv").config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-const databaseConnectionString = "postgres://george:root@localhost:5432/xuri";
 const getDatabaseConnection = () => {
-    const client = new Client({ connectionString: databaseConnectionString });
+    console.log(process.env.DATABASE_CONNECTION_STRING);
+    const client = new Client({ connectionString: process.env.DATABASE_CONNECTION_STRING });
     client.connect();
     return client;
 }
+
+getDatabaseConnection().end();
 
 app.get("/api/:endpoint", async (req, res) => {
     const { endpoint } = req.params;
