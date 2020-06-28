@@ -1,54 +1,54 @@
 const express = require("express");
-const { nanoid } = require("nanoid");
 const cors = require("cors");
+const { nanoid } = require("nanoid");
 const { Client } = require("pg");
-const bodyParser = require("body-parser");
-
-const connectionString = "postgres://george:root@localhost:5432/xuri";
-
-const client = new Client({
-  connectionString: connectionString,
-});
-
-client.connect();
 
 const app = express();
+app.use(express.json());
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
 
-app.get("/", (req, res) => {
-  res.json({
-	"message": "zing.ga, short urls for all!",
-  })
+const databaseConnectionString = "postgres://george:root@localhost:5432/xuri";
+const getDatabaseConnection = () => {
+    const client = new Client({ connectionString: databaseConnectionString });
+    client.connect();
+    return client;
+}
+
+app.get("/api/:endpoint", async (req, res) => {
+    const { endpoint } = req.params;
+    if (endpoint == "urls") {
+	try {
+	    const client = getDatabaseConnection();
+	    const { rows } = await client.query("SELECT url, id FROM urls");
+	    res.json({ message: "urls", data: rows });
+	    client.end();
+	} catch (err) {
+	    res.json({ message: "err", stack: err.stack });
+	}
+    }
+});
+
+app.post("/api/:endpoint", async (req, res) => {
+    const { endpoint } = req.params;
+
+    switch (endpoint) {
+	case "create":
+	    let { slug, url } = req.body;
+	    slug = slug == "" ? nanoid(11) : slug;
+	    try {
+		const client = getDatabaseConnection();
+		const { rows } = await client.query("INSERT INTO urls(id, url) VALUES($1, $2)", [slug, url]);
+		res.json({ id: slug, res: rows, url: url });
+		client.end();
+	    } catch (err) {
+		res.json({ message: err, stack: err.stack });
+	    }
+    }
 })
 
-app.get("/:slug", async (req, res) => {
-  const { slug } = req.params;
-  try {
-	const { rows } = await client.query("SELECT url FROM urls WHERE id = $1", [slug]);
-	let redirectUrl = rows[0]
-	if (redirectUrl.url.startsWith("http") == false) redirectUrl = "http://" + redirectUrl.url
-	res.redirect(redirectUrl);
-  } catch (err) {
-	res.json({ message: "error", stack: err.stack })
-  }
-});
-
-app.post("/", async (req, res) => {
-  let { url, slug } = req.body;
-  if (slug == "") slug = nanoid(7);
-
-  try {
-	const { rows } = await client.query("INSERT INTO urls(id, url) VALUES($1, $2)", [slug, url]);
-	res.send({ id: id, url: url, res: rows })
-  } catch (err) {
-	res.json({ message: "error", stack: err.stack })
-  }
-});
-
-const port = 3001;
-app.listen(port, () => {
-  console.log(`Server started on http://localhost:${port}`)
-});
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, (err) => {
+    if (err) console.error(err.stack);
+    console.log("Server started on port : " + PORT);
+})
 
