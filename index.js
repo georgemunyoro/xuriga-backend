@@ -13,7 +13,7 @@ const getDatabaseConnection = () => {
     const client = new Client({ connectionString: process.env.DATABASE_CONNECTION_STRING });
     client.connect();
     return client;
-}
+};
 
 getDatabaseConnection().end();
 
@@ -47,11 +47,11 @@ app.post("/api/:endpoint", async (req, res) => {
 		res.json({ message: err, stack: err.stack });
 	    }
     }
-})
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, (err) => {
     if (err) console.error(err.stack);
     console.log("Server started on port : " + PORT);
-})
+});
 
